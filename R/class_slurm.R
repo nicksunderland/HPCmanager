@@ -69,17 +69,17 @@ setMethod(
     .Object@account <- account
     validObject(.Object)
     bash_script_path <- write_r_bash_script(.Object)
+    print(bash_script_path)
 
     cat("Submitting bash script: ", bash_script_path)
     sbatch_return <- system(paste("sbatch", bash_script_path), intern = TRUE)
     job_id <- sub("Submitted batch job ", "", sbatch_return)
     cat("Job ID: ", job_id)
+    print(sbatch_return)
 
     opt <- options(show.error.messages = FALSE)
     on.exit(options(opt))
     suppressWarnings({stop()})
-
-
 
     # .Object
 })
