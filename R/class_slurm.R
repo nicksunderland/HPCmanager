@@ -108,11 +108,12 @@ cat("The run script path: ", run_script_fp)
 
     # Create the bash script
     bash_lines <- paste0(
-      c(
+    c(
         slurm_preamble,
         "module load R",
-        "Rscript ", run_script_fp
-      )
+        paste0("Rscript ", run_script_fp)
+    ),
+    collapse = "\n"
     )
 cat("The bash script")
 print(bash_lines)
