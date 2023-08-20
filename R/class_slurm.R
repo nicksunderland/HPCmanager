@@ -73,16 +73,16 @@ setMethod(
     slurm_preamble <- paste0(
       c(
         "#!/bin/bash",
-        "#SBATCH --job-name=", .Object@job_name,
-        "#SBATCH --partition=", .Object@partition,
-        "#SBATCH --nodes=", as.character(.Object@nodes),
-        "SBATCH --cpus-per-task=", as.character(.Object@cpu_per_task),
-        "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
-                                   .Object@max_time_days,
-                                   .Object@max_time_hours,
-                                   .Object@max_time_mins,
-                                   .Object@max_time_secs),
-        "#SBATCH --mem=", as.character(.Object@mem_per_cpu), "M"
+        paste0("#SBATCH --job-name=", .Object@job_name),
+        paste0("#SBATCH --partition=", .Object@partition),
+        paste0("#SBATCH --nodes=", as.character(.Object@nodes)),
+        paste0("SBATCH --cpus-per-task=", as.character(.Object@cpu_per_task)),
+        paste0("#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
+                                          .Object@max_time_days,
+                                          .Object@max_time_hours,
+                                          .Object@max_time_mins,
+                                          .Object@max_time_secs)),
+        paste0("#SBATCH --mem=", as.character(.Object@mem_per_cpu), "M")
       ),
       collapse = "\n"
     )
