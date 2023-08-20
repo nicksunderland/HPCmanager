@@ -1,21 +1,21 @@
-#' format_time
-#'
-#' @param duration lubridate duration object
-#'
-#' @return a formated string e.g. '4-00:01:00' 4 days 1 hour
-#' @importFrom lubridate duration day minute second seconds_to_period
-#' @noRd
-#'
-format_time <- function(duration) {
-  secs = lubridate::duration(duration, units="seconds")
-  period = lubridate::seconds_to_period(secs)
-  text = sprintf('%d-%02d:%02d:%02d',
-                 lubridate::day(period),
-                 period@hour,
-                 lubridate::minute(period),
-                 lubridate::second(period))
-  return(text)
-}
+#' #' format_time
+#' #'
+#' #' @param duration lubridate duration object
+#' #'
+#' #' @return a formated string e.g. '4-00:01:00' 4 days 1 hour
+#' #' @importFrom lubridate duration day minute second seconds_to_period
+#' #' @noRd
+#' #'
+#' format_time <- function(duration) {
+#'   secs = lubridate::duration(duration, units="seconds")
+#'   period = lubridate::seconds_to_period(secs)
+#'   text = sprintf('%d-%02d:%02d:%02d',
+#'                  lubridate::day(period),
+#'                  period@hour,
+#'                  lubridate::minute(period),
+#'                  lubridate::second(period))
+#'   return(text)
+#' }
 
 #' @title Get script path
 #' @description Find the path to the script calling this function

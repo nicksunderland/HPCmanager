@@ -26,8 +26,14 @@ TODO: the description
 
 \item{\code{cpu_per_task}}{integer}
 
-\item{\code{mem_per_cpu}}{integer.}
+\item{\code{max_time_days}}{integer}
 
-\item{\code{max_time}}{lubridate duration}
+\item{\code{max_time_hours}}{integer}
+
+\item{\code{max_time_mins}}{integer}
+
+\item{\code{max_time_secs}}{integer}
+
+\item{\code{mem_per_cpu}}{integer.}
 }}
 

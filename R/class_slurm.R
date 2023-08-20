@@ -8,12 +8,14 @@
 #' @slot nodes integer
 #' @slot tasks_per_node integer
 #' @slot cpu_per_task integer
+#' @slot max_time_days integer
+#' @slot max_time_hours integer
+#' @slot max_time_mins integer
+#' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
-#' @slot max_time lubridate duration
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod
-#' @importClassesFrom lubridate Duration
 #' @export
 #'
 Slurm <- setClass(
@@ -25,7 +27,10 @@ Slurm <- setClass(
     nodes = "integer",
     tasks_per_node = "integer",
     cpu_per_task = "integer",
-    max_time = "Duration",
+    max_time_days = "integer",
+    max_time_hours = "integer",
+    max_time_mins = "integer",
+    max_time_secs = "integer",
     mem_per_cpu = "integer"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
@@ -47,8 +52,11 @@ Slurm <- setClass(
     nodes = 2L,
     tasks_per_node = 2L,
     cpu_per_task = 1L,
-    max_time = lubridate::duration(1, units="hours"),
-    mem_per_cpu = 100L
+    mem_per_cpu = 100L,
+    max_time_days = 0L,
+    max_time_hours = 1L,
+    max_time_mins = 0L,
+    max_time_secs = 0L
   )
 )
 
@@ -99,7 +107,11 @@ setMethod(
     "#SBATCH --partition=", object@partition,
     "#SBATCH --nodes=", as.character(object@nodes),
     "SBATCH --cpus-per-task=", as.character(object@cpu_per_task),
-    "#SBATCH --time=", format_time(object@max_time),
+    "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
+                               object@max_time_days,
+                               object@max_time_hours,
+                               object@max_time_mins,
+                               object@max_time_secs),
     "#SBATCH --mem=", as.character(object@mem_per_cpu), "M"
     ),
     collapse = "\n"
