@@ -29,7 +29,5 @@ TODO: the description
 \item{\code{mem_per_cpu}}{integer.}
 
 \item{\code{max_time}}{lubridate duration}
-
-\item{\code{test_path}}{string path for the file where Slurm object created}
 }}
 

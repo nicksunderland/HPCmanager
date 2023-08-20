@@ -1,44 +1,3 @@
-#' @title Stub function
-#' @return nothing
-#' @noRd
-stub <- function() {}
-
-#' @title Here - where am I?
-#' @description
-#' https://gist.github.com/jasonsychau/ff6bc78a33bf3fd1c6bd4fa78bbf42e7
-#'
-#' @return file path to where `here()` was called.
-#' @importFrom knitr current_input
-#' @importFrom rstudioapi getSourceEditorContext isAvailable
-#' @export
-#'
-here <- function() {
-  cmdArgs <- commandArgs(trailingOnly = FALSE)
-  if (length(grep("^-f$", cmdArgs)) > 0) {
-    # R console option
-    normalizePath(dirname(cmdArgs[grep("^-f", cmdArgs) + 1]))[1]
-  } else if (length(grep("^--file=", cmdArgs)) > 0) {
-    # Rscript/R console option
-    scriptPath <- normalizePath(dirname(sub("^--file=", "", cmdArgs[grep("^--file=", cmdArgs)])))[1]
-  } else if (Sys.getenv("RSTUDIO") == "1") {
-    if (rstudioapi::isAvailable(version_needed=NULL,child_ok=FALSE)) {
-      # RStudio interactive
-      dirname(rstudioapi::getSourceEditorContext()$path)
-    } else if (is.null(knitr::current_input(dir = TRUE)) == FALSE) {
-      # Knit
-      knitr::current_input(dir = TRUE)
-    } else {
-      # R markdown on RStudio
-      getwd()
-    }
-  } else if (is.null(attr(stub, "srcref")) == FALSE) {
-    # 'source'd via R console
-    dirname(normalizePath(attr(attr(stub, "srcref"), "srcfile")$filename))
-  } else {
-    stop("Cannot find file path")
-  }
-}
-
 #' @title Slurm
 #' @description
 #' TODO: the description
@@ -51,10 +10,9 @@ here <- function() {
 #' @slot cpu_per_task integer
 #' @slot mem_per_cpu integer.
 #' @slot max_time lubridate duration
-#' @slot test_path string path for the file where Slurm object created
 #'
 #' @return a Slurm object
-#' @importFrom methods slot new validObject
+#' @importFrom methods slot new validObject callNextMethod
 #' @importClassesFrom lubridate Duration
 #' @export
 #'
@@ -68,8 +26,7 @@ Slurm <- setClass(
     tasks_per_node = "integer",
     cpu_per_task = "integer",
     max_time = "Duration",
-    mem_per_cpu = "integer",
-    test_path = "ANY"
+    mem_per_cpu = "integer"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
     # --dependency
@@ -90,44 +47,35 @@ Slurm <- setClass(
     nodes = 2L,
     tasks_per_node = 2L,
     cpu_per_task = 1L,
-    max_time = lubridate::duration(1, units="days"),
-    mem_per_cpu = 100L,
-    test_path = character()
+    max_time = lubridate::duration(1, units="hours"),
+    mem_per_cpu = 100L
   )
 )
 
-setGeneric("initialize", function(object){standardGeneric("initialize")})
 setMethod(
   f = "initialize",
   signature = "Slurm",
-  definition =function(object) {
-    #object@test_path <- here()
-    validObject(object)
-    object
+  definition =function(.Object, job_name, account, ...) {
+    .Object <- callNextMethod(.Object, ...)
+    .Object@job_name <- job_name
+    .Object@account <- account
+    validObject(.Object)
+    bash_script_path <- write_r_bash_script(.Object)
+
+    cat("Submitting bash script: ", bash_script_path)
+    sbatch_return <- system(paste("sbatch", bash_script_path), intern = TRUE)
+    job_id <- sub("Submitted batch job ", "", sbatch_return)
+    cat("Job ID: ", job_id)
+
+    opt <- options(show.error.messages = FALSE)
+    on.exit(options(opt))
+    suppressWarnings({stop()})
+
+
+
+    # .Object
 })
 
-
-
-#' @title queue
-#' @description
-#' A short description...
-#' @param object a Slurm object
-#' @return side effects, plus the Slurm object
-#' @export
-#' @rdname queue
-#'
-setGeneric("queue", function(object){standardGeneric("queue")})
-
-#' @rdname queue
-setMethod(
-  f = "queue",
-  signature = "Slurm",
-  definition = function(object) {
-
-    cat("I'm a slurm object.", object@job_name, object@account, sep = "\n" )
-
-  }
-)
 
 #' @title write_preamble
 #' @description
@@ -147,35 +95,95 @@ setMethod(
   definition = function(object) {
     s <- glue::glue(
     "
-      #!/bin/bash \n
-      #SBATCH --job-name={object@job_name}
-      #SBATCH --partition={object@partition}
-      #SBATCH --nodes={object@nodes}
-      #SBATCH --cpus-per-task={object@cpu_per_task}
-      #SBATCH --time={format_time(object@max_time)}
-      #SBATCH --mem={object@mem_per_cpu}M
+    #!/bin/bash \n
+    #SBATCH --job-name={object@job_name}
+    #SBATCH --partition={object@partition}
+    #SBATCH --nodes={as.character(object@nodes)}
+    #SBATCH --cpus-per-task={as.character(object@cpu_per_task)}
+    #SBATCH --time={format_time(object@max_time)}
+    #SBATCH --mem={as.character(object@mem_per_cpu)}M
     "
     )
+    return(s)
   }
 )
 
-#' format_time
+
+#' @title write_r_script
+#' @description
+#' A short description...
+#' @param object a Slurm object
+#' @return a string, the r script
+#' @importFrom glue glue
+#' @export
+#' @rdname write_r_script
 #'
-#' @param duration lubridate duration object
+setGeneric("write_r_script", function(object){standardGeneric("write_r_script")})
+
+#' @rdname write_r_script
+setMethod(
+  f = "write_r_script",
+  signature = "Slurm",
+  definition = function(object) {
+
+    r_fp <- get_script_path()
+    script_dir <- dirname(r_fp)
+    r_script <- readLines(r_fp)
+
+    # adjust and write out
+    r_script <- paste0(r_script, collapse="\n")
+    run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
+    run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
+    run_script_fp <- sub(".R$", "_run.R", r_fp)
+    writeLines(run_script, run_script_fp)
+
+    return(run_script_fp)
+  }
+)
+
+
+#' @title write_r_bash_script
+#' @description
+#' A short description...
+#' @param object a Slurm object
+#' @return a string, the bash script
+#' @importFrom glue glue
+#' @export
+#' @rdname write_r_bash_script
 #'
-#' @return a formated string e.g. '4-00:01:00' 4 days 1 hour
-#' @importFrom lubridate duration day minute second seconds_to_period
-#' @noRd
-#'
-format_time <- function(duration) {
-  secs = lubridate::duration(duration, units="seconds")
-  period = lubridate::seconds_to_period(secs)
-  text = sprintf('%d-%02d:%02d:%02d',
-                 lubridate::day(period),
-                 period@hour,
-                 lubridate::minute(period),
-                 lubridate::second(period))
-}
+setGeneric("write_r_bash_script", function(object){standardGeneric("write_r_bash_script")})
+
+#' @rdname write_r_bash_script
+setMethod(
+  f = "write_r_bash_script",
+  signature = "Slurm",
+  definition = function(object) {
+
+    #print("write_r_bash_script()")
+    slurm_preamble <- write_preamble(object)
+    #print(slurm_preamble)
+
+    run_script_path <- write_r_script(object)
+    #print(run_script_path)
+
+    # bash
+    bash_lines <- glue(
+    "
+    {slurm_preamble}
+
+    module load R
+
+    Rscript {run_script_path}
+    ")
+
+    bash_script_path <- sub("_run.R$", "_bash.sh", run_script_path)
+    writeLines(bash_lines, bash_script_path)
+    #print(bash_lines)
+
+  return(bash_script_path)
+  }
+)
+
 
 
 
