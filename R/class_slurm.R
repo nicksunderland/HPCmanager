@@ -14,7 +14,7 @@
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
 #' @slot run_path character.
-#' @slot bash_pathn character.
+#' @slot bash_path character.
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod

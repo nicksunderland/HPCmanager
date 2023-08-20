@@ -38,6 +38,6 @@ TODO: the description
 
 \item{\code{run_path}}{character.}
 
-\item{\code{bash_pathn}}{character.}
+\item{\code{bash_path}}{character.}
 }}
 
