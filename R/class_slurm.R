@@ -31,7 +31,8 @@ Slurm <- setClass(
     max_time_hours = "integer",
     max_time_mins = "integer",
     max_time_secs = "integer",
-    mem_per_cpu = "integer"
+    mem_per_cpu = "integer",
+    script_path = "character"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
     # --dependency
@@ -56,18 +57,22 @@ Slurm <- setClass(
     max_time_days = 0L,
     max_time_hours = 1L,
     max_time_mins = 0L,
-    max_time_secs = 0L
+    max_time_secs = 0L,
+    script_path = character()
   )
 )
 
 setMethod(
   f = "initialize",
   signature = "Slurm",
-  definition =function(.Object, job_name, account, ...) {
+  definition =function(.Object, job_name, account, script_path, ...) {
     print("initialize")
     .Object <- callNextMethod(.Object, ...)
     .Object@job_name <- job_name
     .Object@account <- account
+    .Object@script_path <- script_path
+
+    print(.Object@script_path)
 
     # Create the preamble
     slurm_preamble <- paste0(
@@ -89,7 +94,7 @@ setMethod(
     print(slurm_preamble)
 
     # Create the R script
-    r_fp <- get_script_path()
+    r_fp <- .Object@script_path  #get_script_path()
 cat("R script path: ", r_fp)
     script_dir <- dirname(r_fp)
 cat("R script dir: ", script_dir)
