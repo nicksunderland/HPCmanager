@@ -13,8 +13,6 @@
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
-#' @slot run_path character.
-#' @slot bash_path character.
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod
@@ -33,9 +31,7 @@ Slurm <- setClass(
     max_time_hours = "integer",
     max_time_mins = "integer",
     max_time_secs = "integer",
-    mem_per_cpu = "integer",
-    run_path = "character",
-    bash_path = "character"
+    mem_per_cpu = "integer"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
     # --dependency
@@ -60,9 +56,7 @@ Slurm <- setClass(
     max_time_days = 0L,
     max_time_hours = 1L,
     max_time_mins = 0L,
-    max_time_secs = 0L,
-    run_path = character(),
-    bash_path = character()
+    max_time_secs = 0L
   )
 )
 
@@ -70,23 +64,69 @@ setMethod(
   f = "initialize",
   signature = "Slurm",
   definition =function(.Object, job_name, account, ...) {
+    print("initialize")
     .Object <- callNextMethod(.Object, ...)
     .Object@job_name <- job_name
     .Object@account <- account
 
+    # Create the preamble
+    slurm_preamble <- paste0(
+      c(
+        "#!/bin/bash",
+        "#SBATCH --job-name=", .Object@job_name,
+        "#SBATCH --partition=", .Object@partition,
+        "#SBATCH --nodes=", as.character(.Object@nodes),
+        "SBATCH --cpus-per-task=", as.character(.Object@cpu_per_task),
+        "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
+                                   .Object@max_time_days,
+                                   .Object@max_time_hours,
+                                   .Object@max_time_mins,
+                                   .Object@max_time_secs),
+        "#SBATCH --mem=", as.character(.Object@mem_per_cpu), "M"
+      ),
+      collapse = "\n"
+    )
+    print(slurm_preamble)
 
-    bash_script_path <- write_r_bash_script(.Object)
-    .Object@bash_path <- bash_script_path
+    # Create the R script
+    r_fp <- get_script_path()
+cat("R script path: ", r_fp)
+    script_dir <- dirname(r_fp)
+cat("R script dir: ", script_dir)
+    r_script <- readLines(r_fp)
+cat("The r script")
+print(r_script)
+    r_script <- paste0(r_script, collapse="\n")
+    run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
+    run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
+cat("The run script")
+print(run_script)
+    run_script_fp <- sub(".R$", "_run.R", r_fp)
+cat("The run script path: ", run_script_fp)
+    writeLines(run_script, run_script_fp)
 
-    print(bash_script_path)
+
+    # Create the bash script
+    bash_lines <- paste0(
+      c(
+        slurm_preamble,
+        "module load R",
+        "Rscript ", run_script_fp
+      )
+    )
+cat("The bash script")
+print(bash_lines)
+
+    bash_script_path <- sub("_run.R$", "_bash.sh", run_script_fp)
+cat("The bash script path: ", bash_script_path)
+    writeLines(bash_lines, bash_script_path)
+
 
     cat("Submitting bash script: ", bash_script_path)
     sbatch_return <- system(paste("sbatch", bash_script_path), intern = TRUE)
     job_id <- sub("Submitted batch job ", "", sbatch_return)
     cat("Job ID: ", job_id)
     print(sbatch_return)
-
-
 
     opt <- options(show.error.messages = FALSE)
     on.exit(options(opt))
@@ -96,114 +136,114 @@ setMethod(
 })
 
 
-#' @title write_preamble
-#' @description
-#' A short description...
-#' @param object a Slurm object
-#' @return a string, the Slurm preamble
-#' @export
-#' @rdname write_preamble
+#' #' @title write_preamble
+#' #' @description
+#' #' A short description...
+#' #' @param object a Slurm object
+#' #' @return a string, the Slurm preamble
+#' #' @export
+#' #' @rdname write_preamble
+#' #'
+#' setGeneric("write_preamble", function(object){standardGeneric("write_preamble")})
 #'
-setGeneric("write_preamble", function(object){standardGeneric("write_preamble")})
-
-#' @rdname write_preamble
-setMethod(
-  f = "write_preamble",
-  signature = "Slurm",
-  definition = function(object) {
-    s <- paste0(
-    c(
-    "#!/bin/bash",
-    "#SBATCH --job-name=", object@job_name,
-    "#SBATCH --partition=", object@partition,
-    "#SBATCH --nodes=", as.character(object@nodes),
-    "SBATCH --cpus-per-task=", as.character(object@cpu_per_task),
-    "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
-                               object@max_time_days,
-                               object@max_time_hours,
-                               object@max_time_mins,
-                               object@max_time_secs),
-    "#SBATCH --mem=", as.character(object@mem_per_cpu), "M"
-    ),
-    collapse = "\n"
-    )
-    return(s)
-  }
-)
+#' #' @rdname write_preamble
+#' setMethod(
+#'   f = "write_preamble",
+#'   signature = "Slurm",
+#'   definition = function(object) {
+#'     s <- paste0(
+#'     c(
+#'     "#!/bin/bash",
+#'     "#SBATCH --job-name=", object@job_name,
+#'     "#SBATCH --partition=", object@partition,
+#'     "#SBATCH --nodes=", as.character(object@nodes),
+#'     "SBATCH --cpus-per-task=", as.character(object@cpu_per_task),
+#'     "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
+#'                                object@max_time_days,
+#'                                object@max_time_hours,
+#'                                object@max_time_mins,
+#'                                object@max_time_secs),
+#'     "#SBATCH --mem=", as.character(object@mem_per_cpu), "M"
+#'     ),
+#'     collapse = "\n"
+#'     )
+#'     return(s)
+#'   }
+#' )
 
 
-#' @title write_r_script
-#' @description
-#' A short description...
-#' @param object a Slurm object
-#' @return a string, the r script
-#' @export
-#' @rdname write_r_script
+#' #' @title write_r_script
+#' #' @description
+#' #' A short description...
+#' #' @param object a Slurm object
+#' #' @return a string, the r script
+#' #' @export
+#' #' @rdname write_r_script
+#' #'
+#' setGeneric("write_r_script", function(object){standardGeneric("write_r_script")})
 #'
-setGeneric("write_r_script", function(object){standardGeneric("write_r_script")})
-
-#' @rdname write_r_script
-setMethod(
-  f = "write_r_script",
-  signature = "Slurm",
-  definition = function(object) {
-
-    r_fp <- get_script_path()
-    script_dir <- dirname(r_fp)
-    r_script <- readLines(r_fp)
-
-    # adjust and write out
-    r_script <- paste0(r_script, collapse="\n")
-    run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
-    run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
-    run_script_fp <- sub(".R$", "_run.R", r_fp)
-    writeLines(run_script, run_script_fp)
-
-    return(run_script_fp)
-  }
-)
-
-
-#' @title write_r_bash_script
-#' @description
-#' A short description...
-#' @param object a Slurm object
-#' @return a string, the bash script
-#' @export
-#' @rdname write_r_bash_script
+#' #' @rdname write_r_script
+#' setMethod(
+#'   f = "write_r_script",
+#'   signature = "Slurm",
+#'   definition = function(object) {
 #'
-setGeneric("write_r_bash_script", function(object){standardGeneric("write_r_bash_script")})
+#'     r_fp <- get_script_path()
+#'     script_dir <- dirname(r_fp)
+#'     r_script <- readLines(r_fp)
+#'
+#'     # adjust and write out
+#'     r_script <- paste0(r_script, collapse="\n")
+#'     run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
+#'     run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
+#'     run_script_fp <- sub(".R$", "_run.R", r_fp)
+#'     writeLines(run_script, run_script_fp)
+#'
+#'     return(run_script_fp)
+#'   }
+#' )
 
-#' @rdname write_r_bash_script
-setMethod(
-  f = "write_r_bash_script",
-  signature = "Slurm",
-  definition = function(object) {
-
-    #print("write_r_bash_script()")
-    slurm_preamble <- write_preamble(object)
-    #print(slurm_preamble)
-
-    run_script_path <- write_r_script(object)
-    .Object@run_path <- run_script_path
-    #print(run_script_path)
-
-    # bash
-    bash_lines <- paste0(
-    c(
-    slurm_preamble,
-    "module load R",
-    "Rscript ", run_script_path
-    )
-    )
-
-    bash_script_path <- sub("_run.R$", "_bash.sh", run_script_path)
-    writeLines(bash_lines, bash_script_path)
-    #print(bash_lines)
-
-  return(bash_script_path)
-  }
-)
+#'
+#' #' @title write_r_bash_script
+#' #' @description
+#' #' A short description...
+#' #' @param object a Slurm object
+#' #' @return a string, the bash script
+#' #' @export
+#' #' @rdname write_r_bash_script
+#' #'
+#' setGeneric("write_r_bash_script", function(object){standardGeneric("write_r_bash_script")})
+#'
+#' #' @rdname write_r_bash_script
+#' setMethod(
+#'   f = "write_r_bash_script",
+#'   signature = "Slurm",
+#'   definition = function(object) {
+#'
+#'     #print("write_r_bash_script()")
+#'     slurm_preamble <- write_preamble(object)
+#'     #print(slurm_preamble)
+#'
+#'     run_script_path <- write_r_script(object)
+#'     .Object@run_path <- run_script_path
+#'     #print(run_script_path)
+#'
+#'     # bash
+#'     bash_lines <- paste0(
+#'     c(
+#'     slurm_preamble,
+#'     "module load R",
+#'     "Rscript ", run_script_path
+#'     )
+#'     )
+#'
+#'     bash_script_path <- sub("_run.R$", "_bash.sh", run_script_path)
+#'     writeLines(bash_lines, bash_script_path)
+#'     #print(bash_lines)
+#'
+#'   return(bash_script_path)
+#'   }
+#' )
 
 
 
