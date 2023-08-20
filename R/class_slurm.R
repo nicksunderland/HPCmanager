@@ -82,7 +82,6 @@ setMethod(
 #' A short description...
 #' @param object a Slurm object
 #' @return a string, the Slurm preamble
-#' @importFrom glue glue
 #' @export
 #' @rdname write_preamble
 #'
@@ -93,16 +92,17 @@ setMethod(
   f = "write_preamble",
   signature = "Slurm",
   definition = function(object) {
-    s <- glue::glue(
-    "
-    #!/bin/bash \n
-    #SBATCH --job-name={object@job_name}
-    #SBATCH --partition={object@partition}
-    #SBATCH --nodes={as.character(object@nodes)}
-    #SBATCH --cpus-per-task={as.character(object@cpu_per_task)}
-    #SBATCH --time={format_time(object@max_time)}
-    #SBATCH --mem={as.character(object@mem_per_cpu)}M
-    "
+    s <- paste0(
+    c(
+    "#!/bin/bash",
+    "#SBATCH --job-name=", object@job_name,
+    "#SBATCH --partition=", object@partition,
+    "#SBATCH --nodes=", as.character(object@nodes),
+    "SBATCH --cpus-per-task=", as.character(object@cpu_per_task),
+    "#SBATCH --time=", format_time(object@max_time),
+    "#SBATCH --mem=", as.character(object@mem_per_cpu), "M"
+    ),
+    collapse = "\n"
     )
     return(s)
   }
@@ -114,7 +114,6 @@ setMethod(
 #' A short description...
 #' @param object a Slurm object
 #' @return a string, the r script
-#' @importFrom glue glue
 #' @export
 #' @rdname write_r_script
 #'
@@ -147,7 +146,6 @@ setMethod(
 #' A short description...
 #' @param object a Slurm object
 #' @return a string, the bash script
-#' @importFrom glue glue
 #' @export
 #' @rdname write_r_bash_script
 #'
@@ -167,14 +165,13 @@ setMethod(
     #print(run_script_path)
 
     # bash
-    bash_lines <- glue(
-    "
-    {slurm_preamble}
-
-    module load R
-
-    Rscript {run_script_path}
-    ")
+    bash_lines <- paste0(
+    c(
+    slurm_preamble,
+    "module load R",
+    "Rscript ", run_script_path
+    )
+    )
 
     bash_script_path <- sub("_run.R$", "_bash.sh", run_script_path)
     writeLines(bash_lines, bash_script_path)

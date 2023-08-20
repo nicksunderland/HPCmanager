@@ -20,7 +20,6 @@ format_time <- function(duration) {
 #' @title Get script path
 #' @description Find the path to the script calling this function
 #' http://stackoverflow.com/questions/1815606/rscript-determine-path-of-the-executing-script#comment12780420_1815606
-#' @importFrom rstudioapi getSourceEditorContext
 #' @return a string, the file path
 #' @noRd
 #'
@@ -37,10 +36,6 @@ get_script_path <- function() {
     # print("cmd line rscript")
     # print(cmdargs)
     return(normalizePath(gsub("--file=", "", cmdargs[grep("--file=", cmdargs)])))
-  } else if (Sys.getenv("RSTUDIO") == "1") {
-    # RStudio
-    # print("r studio")
-    return(rstudioapi::getSourceEditorContext()$path)
   } else {
     # 'source'd via R console
     # print("source'd via R console")
