@@ -35,5 +35,9 @@ TODO: the description
 \item{\code{max_time_secs}}{integer}
 
 \item{\code{mem_per_cpu}}{integer.}
+
+\item{\code{run_path}}{character.}
+
+\item{\code{bash_pathn}}{character.}
 }}
 

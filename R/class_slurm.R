@@ -13,6 +13,8 @@
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
+#' @slot run_path character.
+#' @slot bash_pathn character.
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod
@@ -31,7 +33,9 @@ Slurm <- setClass(
     max_time_hours = "integer",
     max_time_mins = "integer",
     max_time_secs = "integer",
-    mem_per_cpu = "integer"
+    mem_per_cpu = "integer",
+    run_path = "character",
+    bash_path = "character"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
     # --dependency
@@ -56,7 +60,9 @@ Slurm <- setClass(
     max_time_days = 0L,
     max_time_hours = 1L,
     max_time_mins = 0L,
-    max_time_secs = 0L
+    max_time_secs = 0L,
+    run_path = character(),
+    bash_path = character()
   )
 )
 
@@ -67,8 +73,11 @@ setMethod(
     .Object <- callNextMethod(.Object, ...)
     .Object@job_name <- job_name
     .Object@account <- account
-    validObject(.Object)
+
+
     bash_script_path <- write_r_bash_script(.Object)
+    .Object@bash_path <- bash_script_path
+
     print(bash_script_path)
 
     cat("Submitting bash script: ", bash_script_path)
@@ -76,6 +85,8 @@ setMethod(
     job_id <- sub("Submitted batch job ", "", sbatch_return)
     cat("Job ID: ", job_id)
     print(sbatch_return)
+
+
 
     opt <- options(show.error.messages = FALSE)
     on.exit(options(opt))
@@ -174,6 +185,7 @@ setMethod(
     #print(slurm_preamble)
 
     run_script_path <- write_r_script(object)
+    .Object@run_path <- run_script_path
     #print(run_script_path)
 
     # bash
