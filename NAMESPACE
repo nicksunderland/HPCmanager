@@ -2,6 +2,7 @@
 
 export(Slurm)
 exportClasses(Slurm)
+importFrom(glue,glue)
 importFrom(methods,callNextMethod)
 importFrom(methods,new)
 importFrom(methods,slot)

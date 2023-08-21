@@ -36,8 +36,8 @@ TODO: the description
 
 \item{\code{mem_per_cpu}}{integer.}
 
-\item{\code{script_path}}{character.}
+\item{\code{r_version}}{character.}
 
-\item{\code{run_path}}{character.}
+\item{\code{rscript_options}}{character.}
 }}
 
