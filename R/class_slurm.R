@@ -79,6 +79,7 @@ setMethod(
     slurm_preamble <- glue(
      "#!/bin/bash
       #SBATCH --job-name={.Object@job_name}
+      #SBATCH --account={.Object@account}
       #SBATCH --partition={.Object@partition}
       #SBATCH --cpus-per-task={as.character(.Object@cpu_per_task)}
       #SBATCH --nodes={as.character(.Object@nodes)}
