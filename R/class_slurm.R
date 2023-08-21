@@ -13,6 +13,8 @@
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
+#' @slot script_path character.
+#' @slot run_path character.
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod
@@ -32,7 +34,8 @@ Slurm <- setClass(
     max_time_mins = "integer",
     max_time_secs = "integer",
     mem_per_cpu = "integer",
-    script_path = "character"
+    script_path = "character",
+    run_path = "character"
 
     # https://slurm.schedmd.com/archive/slurm-16.05.8/sbatch.html
     # --dependency
@@ -58,7 +61,8 @@ Slurm <- setClass(
     max_time_hours = 1L,
     max_time_mins = 0L,
     max_time_secs = 0L,
-    script_path = character()
+    script_path = character(),
+    run_path = character()
   )
 )
 
@@ -74,71 +78,78 @@ setMethod(
 
     print(.Object@script_path)
 
-    # Create the preamble
-    slurm_preamble <- paste0(
-      c(
-        "#!/bin/bash",
-        paste0("#SBATCH --job-name=", .Object@job_name),
-        paste0("#SBATCH --partition=", .Object@partition),
-        paste0("#SBATCH --nodes=", as.character(.Object@nodes)),
-        paste0("SBATCH --cpus-per-task=", as.character(.Object@cpu_per_task)),
-        paste0("#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
-                                          .Object@max_time_days,
-                                          .Object@max_time_hours,
-                                          .Object@max_time_mins,
-                                          .Object@max_time_secs)),
-        paste0("#SBATCH --mem=", as.character(.Object@mem_per_cpu), "M")
-      ),
-      collapse = "\n"
-    )
-    print(slurm_preamble)
+    .Object@run_path <- sub(".R$", "_run.R", .Object@script_path)
 
-    # Create the R script
-    r_fp <- .Object@script_path  #get_script_path()
-cat("R script path: ", r_fp)
-    script_dir <- dirname(r_fp)
-cat("R script dir: ", script_dir)
-    r_script <- readLines(r_fp)
-cat("The r script")
-print(r_script)
-    r_script <- paste0(r_script, collapse="\n")
-    run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
-    run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
-cat("The run script")
-print(run_script)
-    run_script_fp <- sub(".R$", "_run.R", r_fp)
-cat("The run script path: ", run_script_fp)
-    writeLines(run_script, run_script_fp)
+    print(.Object@run_path)
 
+    writeLines(c("testing"), .Object@run_path)
 
-    # Create the bash script
-    bash_lines <- paste0(
-    c(
-        slurm_preamble,
-        "module load R",
-        paste0("Rscript ", run_script_fp)
-    ),
-    collapse = "\n"
-    )
-cat("The bash script")
-print(bash_lines)
+#
+#     # Create the preamble
+#     slurm_preamble <- paste0(
+#       c(
+#         "#!/bin/bash",
+#         paste0("#SBATCH --job-name=", .Object@job_name),
+#         paste0("#SBATCH --partition=", .Object@partition),
+#         paste0("#SBATCH --nodes=", as.character(.Object@nodes)),
+#         paste0("SBATCH --cpus-per-task=", as.character(.Object@cpu_per_task)),
+#         paste0("#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
+#                                           .Object@max_time_days,
+#                                           .Object@max_time_hours,
+#                                           .Object@max_time_mins,
+#                                           .Object@max_time_secs)),
+#         paste0("#SBATCH --mem=", as.character(.Object@mem_per_cpu), "M")
+#       ),
+#       collapse = "\n"
+#     )
+#     print(slurm_preamble)
+#
+#     # Create the R script
+#     r_fp <- .Object@script_path  #get_script_path()
+# cat("R script path: ", r_fp)
+#     script_dir <- dirname(r_fp)
+# cat("R script dir: ", script_dir)
+#     r_script <- readLines(r_fp)
+# cat("The r script")
+# print(r_script)
+#     r_script <- paste0(r_script, collapse="\n")
+#     run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
+#     run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
+# cat("The run script")
+# print(run_script)
+#     run_script_fp <- sub(".R$", "_run.R", r_fp)
+# cat("The run script path: ", run_script_fp)
+#     writeLines(run_script, run_script_fp)
+#
+#
+#     # Create the bash script
+#     bash_lines <- paste0(
+#     c(
+#         slurm_preamble,
+#         "module load R",
+#         paste0("Rscript ", run_script_fp)
+#     ),
+#     collapse = "\n"
+#     )
+# cat("The bash script")
+# print(bash_lines)
+#
+#     bash_script_path <- sub("_run.R$", "_bash.sh", run_script_fp)
+# cat("The bash script path: ", bash_script_path)
+#     writeLines(bash_lines, bash_script_path)
+#
+#
+#     cat("Submitting bash script: ", bash_script_path)
+#     sbatch_return <- system(paste("sbatch", bash_script_path), intern = TRUE)
+#     job_id <- sub("Submitted batch job ", "", sbatch_return)
+#     cat("Job ID: ", job_id)
+#     print(sbatch_return)
+#
+#     opt <- options(show.error.messages = FALSE)
+#     on.exit(options(opt))
+#     suppressWarnings({stop()})
 
-    bash_script_path <- sub("_run.R$", "_bash.sh", run_script_fp)
-cat("The bash script path: ", bash_script_path)
-    writeLines(bash_lines, bash_script_path)
-
-
-    cat("Submitting bash script: ", bash_script_path)
-    sbatch_return <- system(paste("sbatch", bash_script_path), intern = TRUE)
-    job_id <- sub("Submitted batch job ", "", sbatch_return)
-    cat("Job ID: ", job_id)
-    print(sbatch_return)
-
-    opt <- options(show.error.messages = FALSE)
-    on.exit(options(opt))
-    suppressWarnings({stop()})
-
-    # .Object
+     .Object
 })
 
 
