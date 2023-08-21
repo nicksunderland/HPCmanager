@@ -76,8 +76,8 @@ setMethod(
     .Object@account <- account
 
     # Create the preamble
-    slurm_preamble <- glue("
-      #!/bin/bash
+    slurm_preamble <- glue(
+     "#!/bin/bash
       #SBATCH --job-name={.Object@job_name}
       #SBATCH --partition={.Object@partition}
       #SBATCH --cpus-per-task={as.character(.Object@cpu_per_task)}
@@ -108,13 +108,11 @@ setMethod(
     # Create the bash script
     bash_path <- sub(".R$", "_bash.sh", script_path)
     bash_script <- glue(
-      "
-        {slurm_preamble}
+      "{slurm_preamble}
 
-        module load languages/r/{.Object@r_version}
+      module load languages/r/{.Object@r_version}
 
-        Rscript {.Object@rscript_options} {run_path}
-      "
+      Rscript {.Object@rscript_options} {run_path}"
     )
     cat("Creating bash script:\t", bash_path, "\n")
     writeLines(bash_script, bash_path)
