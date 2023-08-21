@@ -102,7 +102,7 @@ setMethod(
     # create a new R script but remove the 'library(HPCmanager) and Slurm() object code
     run_path <- sub(".R$", "_run.R", script_path)
     run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", raw_script)
-    run_script <- sub("\n[-0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][-A-z0-9= \"',.\n]*[)]", "", run_script)
+    run_script <- sub("\n?[-0-9A-z_. ]*(?:<-|=)?[ ]*(?:HPCmanager::)?Slurm[(][-A-z0-9= \"',.\n]*[)]", "", run_script)
     cat("Creating new R script:\t", run_path, "\n")
     writeLines(run_script, run_path)
 
