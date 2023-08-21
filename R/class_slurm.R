@@ -13,6 +13,7 @@
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
+#' @slot modules character.
 #' @slot r_version character.
 #' @slot rscript_options character.
 #'
@@ -35,6 +36,7 @@ Slurm <- setClass(
     max_time_mins = "integer",
     max_time_secs = "integer",
     mem_per_cpu = "integer",
+    modules = "character",
     r_version = "character",
     rscript_options = "character"
 
@@ -62,6 +64,7 @@ Slurm <- setClass(
     max_time_hours = 1L,
     max_time_mins = 0L,
     max_time_secs = 0L,
+    modules = character(),
     r_version = "4.2.1",
     rscript_options = ""
   )
@@ -106,12 +109,22 @@ setMethod(
     cat("Creating new R script:\t", run_path, "\n")
     writeLines(run_script, run_path)
 
+
     # Create the bash script
     bash_path <- sub(".R$", "_bash.sh", script_path)
+    modules <- ""
+    if(length(.Object@modules) > 0) {
+      for(mod in .Object@modules) {
+        modules <- c(modules, paste0("module load ", mod))
+      }
+    }
+    modules <- paste0(modules, collapse="\n")
     bash_script <- glue(
       "{slurm_preamble}
 
       module load languages/r/{.Object@r_version}
+      {modules}
+
 
       Rscript {.Object@rscript_options} {run_path}"
     )
