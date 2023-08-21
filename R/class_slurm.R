@@ -74,10 +74,7 @@ setMethod(
     .Object <- callNextMethod(.Object, ...)
     .Object@job_name <- job_name
     .Object@account <- account
-    .Object@script_path <- script_path
-
-    print(.Object@script_path)
-
+    .Object@script_path <- get_script_path()
     .Object@run_path <- sub(".R$", "_run.R", .Object@script_path)
 
     print(.Object@run_path)
