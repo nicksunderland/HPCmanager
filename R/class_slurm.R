@@ -100,15 +100,16 @@ setMethod(
     script_path <- get_script_path()
     cat("Reading raw R script:\t", script_path, "\n")
     raw_script_lines <- readLines(script_path)
-    raw_script <- paste0(raw_script_lines, collapse="\n")
 
-    # create a new R script but remove the 'library(HPCmanager) and Slurm() object code
+    # create a new R script, remove 'library(HPCmanager) code between   "#SBATCH" flags
+    slurm_header_line_idxs <- grep("#SBATCH", raw_script_lines)
+    stopifnot(length(slurm_header_line_idxs) == 2)
+    start <- slurm_header_line_idxs[1]
+    end <- slurm_header_line_idxs[2]
+    run_script <- raw_script_lines[-(start:end)]
     run_path <- sub(".R$", "_run.R", script_path)
-    run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", raw_script)
-    run_script <- sub("\n?[-0-9A-z_. ]*(?:<-|=)?[ ]*(?:HPCmanager::)?Slurm[(][-A-z0-9= \"',.\n]*[)]", "", run_script)
     cat("Creating new R script:\t", run_path, "\n")
     writeLines(run_script, run_path)
-
 
     # Create the bash script
     bash_path <- sub(".R$", "_bash.sh", script_path)
