@@ -157,7 +157,7 @@ setMethod(
     sbatch_return <- system(paste("sbatch", bash_path), intern = TRUE)
     job_id <- sub("Submitted batch job ", "", sbatch_return)
     cat(sbatch_return, "\n")
-    system(paste0("sacct -j ", job_id))
+    cat("Enter: ", paste0("sacct -j ", job_id), "to view progress\n")
 
     # exit and don't process the rest of the script in this R session
     # the newly generated R script above will be submitted to the HPC
