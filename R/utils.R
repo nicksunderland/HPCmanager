@@ -61,7 +61,6 @@ get_argument <- function(parameter_name) {
 
   # Get the run arguments
   run.arguments <- commandArgs(TRUE)
-  print(run.arguments)
 
   # Loop each argument if and only if there are arguments
   if( length( run.arguments ) > 0 ) {
