@@ -43,3 +43,48 @@ get_script_path <- function() {
     return(normalizePath(sys.frames()[[1]]$ofile))
   }
 }
+
+#' @title get_argument
+#' @description
+#' credit to https://gist.github.com/abelcallejo/f557a7d4ce7e37bbe5306dae864d0f0f#command-line
+#' @param parameter_name the parameter to look for
+#' @return a string. argument passed
+#' @export
+#'
+get_argument <- function(parameter_name) {
+
+  # Set the valid run parameters
+  valid.run.parameters <- c( "SLURM_ARRAY_TASK_ID" = as.integer )
+
+  # make sure parameter is valid
+  stopifnot("Not a valid parameter_name" = parameter_name %in% names(valid.run.parameters))
+
+  # Get the run arguments
+  run.arguments <- commandArgs(TRUE)
+  print(run.arguments)
+
+  # Loop each argument if and only if there are arguments
+  if( length( run.arguments ) > 0 ) {
+
+    for ( i in 1:length( run.arguments ) ) {
+
+      # Validate if it has the --parameter=argument structure
+      if (substr(run.arguments[i], 1, 2) == "--" && grepl("=", run.arguments[i], fixed=TRUE)) {
+
+        # extract the key value pairs
+        key.pair <- strsplit(run.arguments[i], "=", fixed = TRUE)[[1]]
+
+        # remove the '--' prefix from the parameter
+        run.parameter <- substring(key.pair[1], first=3)
+
+        run.argument <- key.pair[2]
+
+        # convert the argument to the correct type
+        run.argument <- valid.run.parameters[[parameter_name]](run.argument)
+
+        # return
+        return(run.argument)
+      }
+    }
+  }
+}

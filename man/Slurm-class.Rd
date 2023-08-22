@@ -43,5 +43,7 @@ TODO: the description
 \item{\code{r_version}}{character.}
 
 \item{\code{rscript_options}}{character.}
+
+\item{\code{array}}{integer array c(1,2,3,4) etc}
 }}
 

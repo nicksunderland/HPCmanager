@@ -17,6 +17,7 @@
 #' @slot modules character.
 #' @slot r_version character.
 #' @slot rscript_options character.
+#' @slot array integer array c(1,2,3,4) etc
 #'
 #' @return a Slurm object
 #' @importFrom methods slot new validObject callNextMethod
@@ -38,6 +39,7 @@ Slurm <- setClass(
     max_time_secs = "integer",
     mem_per_cpu = "integer",
     directory = "character",
+    array = "integer",
     modules = "character",
     r_version = "character",
     rscript_options = "character"
@@ -55,6 +57,7 @@ Slurm <- setClass(
 
   ),
   prototype = list(
+    # slurm header things
     job_name = character(),
     account = character(),
     partition = "cpu",
@@ -66,7 +69,9 @@ Slurm <- setClass(
     max_time_hours = 0L,
     max_time_mins = 1L,
     max_time_secs = 0L,
-    directory = "output",
+    directory = character(),
+    array = integer(),
+    # bash script things
     modules = character(),
     r_version = "4.2.1",
     rscript_options = ""
@@ -95,9 +100,17 @@ setMethod(
                               .Object@max_time_hours,
                               .Object@max_time_mins,
                               .Object@max_time_secs)}
-      #SBATCH --chdir={.Object@directory}
       #SBATCH --mem={as.character(.Object@mem_per_cpu)}M"
     )
+
+    # Optional flags
+    directory <- if(length(.Object@directory) > 0) glue("#SBATCH --chdir={.Object@directory}") else ""
+    array <- if(length(.Object@array) > 0) glue("#SBATCH --array={paste0(.Object@array, collapse=',')}") else ""
+    array_arg <- if(length(.Object@array) > 0) "--SLURM_ARRAY_TASK_ID=\"${SLURM_ARRAY_TASK_ID}\"" else ""
+    optional_flags <- c(directory, array)
+
+    # Add the optional flags
+    slurm_preamble <- paste0(c(slurm_preamble, optional_flags[optional_flags!=""]), collapse="\n")
     cat("Creating slurm header:\n", slurm_preamble, "\n")
 
     # Get the path to 'this' R script and get its contents as a string
@@ -105,7 +118,7 @@ setMethod(
     cat("Reading raw R script:\t", script_path, "\n")
     raw_script_lines <- readLines(script_path)
 
-    # create a new R script, remove 'library(HPCmanager) code between   "#SBATCH" flags
+    # create a new R script, remove 'library(HPCmanager) code between "#SBATCH" flags
     slurm_header_line_idxs <- grep("#SBATCH", raw_script_lines)
     stopifnot(length(slurm_header_line_idxs) == 2)
     start <- slurm_header_line_idxs[1]
@@ -124,14 +137,15 @@ setMethod(
       }
     }
     modules <- paste0(modules, collapse="\n")
+
+    # Build the bash script
     bash_script <- glue(
       "{slurm_preamble}
 
       module load languages/r/{.Object@r_version}
       {modules}
 
-
-      Rscript {.Object@rscript_options} {run_path}"
+      Rscript {.Object@rscript_options} {run_path} {array_arg}"
     )
     cat("Creating bash script:\t", bash_path, "\n")
     writeLines(bash_script, bash_path)
@@ -143,124 +157,13 @@ setMethod(
     cat("Job ID: ", job_id, "\n")
     cat(sbatch_return, "\n")
 
-
+    # exit and don't process the rest of the script in this R session
+    # the newly generated R script above will be submitted to the HPC
     opt <- options(show.error.messages = FALSE)
     on.exit(options(opt))
     suppressWarnings({stop()})
 
-     #.Object
+    # don't return anything as this process just terminates the script
+    #.Object
 })
-
-
-#' #' @title write_preamble
-#' #' @description
-#' #' A short description...
-#' #' @param object a Slurm object
-#' #' @return a string, the Slurm preamble
-#' #' @export
-#' #' @rdname write_preamble
-#' #'
-#' setGeneric("write_preamble", function(object){standardGeneric("write_preamble")})
-#'
-#' #' @rdname write_preamble
-#' setMethod(
-#'   f = "write_preamble",
-#'   signature = "Slurm",
-#'   definition = function(object) {
-#'     s <- paste0(
-#'     c(
-#'     "#!/bin/bash",
-#'     "#SBATCH --job-name=", object@job_name,
-#'     "#SBATCH --partition=", object@partition,
-#'     "#SBATCH --nodes=", as.character(object@nodes),
-#'     "SBATCH --cpus-per-task=", as.character(object@cpu_per_task),
-#'     "#SBATCH --time=", sprintf('%d-%02d:%02d:%02d',
-#'                                object@max_time_days,
-#'                                object@max_time_hours,
-#'                                object@max_time_mins,
-#'                                object@max_time_secs),
-#'     "#SBATCH --mem=", as.character(object@mem_per_cpu), "M"
-#'     ),
-#'     collapse = "\n"
-#'     )
-#'     return(s)
-#'   }
-#' )
-
-
-#' #' @title write_r_script
-#' #' @description
-#' #' A short description...
-#' #' @param object a Slurm object
-#' #' @return a string, the r script
-#' #' @export
-#' #' @rdname write_r_script
-#' #'
-#' setGeneric("write_r_script", function(object){standardGeneric("write_r_script")})
-#'
-#' #' @rdname write_r_script
-#' setMethod(
-#'   f = "write_r_script",
-#'   signature = "Slurm",
-#'   definition = function(object) {
-#'
-#'     r_fp <- get_script_path()
-#'     script_dir <- dirname(r_fp)
-#'     r_script <- readLines(r_fp)
-#'
-#'     # adjust and write out
-#'     r_script <- paste0(r_script, collapse="\n")
-#'     run_script <- sub("library[(][\"']?HPCmanager[\"']?[)]", "", r_script)
-#'     run_script <- sub("\n[0-9A-z_. ]*(?:<-|=)?[ ]*Slurm[(][A-z0-9= \"',.\n]*[)]", "", run_script)
-#'     run_script_fp <- sub(".R$", "_run.R", r_fp)
-#'     writeLines(run_script, run_script_fp)
-#'
-#'     return(run_script_fp)
-#'   }
-#' )
-
-#'
-#' #' @title write_r_bash_script
-#' #' @description
-#' #' A short description...
-#' #' @param object a Slurm object
-#' #' @return a string, the bash script
-#' #' @export
-#' #' @rdname write_r_bash_script
-#' #'
-#' setGeneric("write_r_bash_script", function(object){standardGeneric("write_r_bash_script")})
-#'
-#' #' @rdname write_r_bash_script
-#' setMethod(
-#'   f = "write_r_bash_script",
-#'   signature = "Slurm",
-#'   definition = function(object) {
-#'
-#'     #print("write_r_bash_script()")
-#'     slurm_preamble <- write_preamble(object)
-#'     #print(slurm_preamble)
-#'
-#'     run_script_path <- write_r_script(object)
-#'     .Object@run_path <- run_script_path
-#'     #print(run_script_path)
-#'
-#'     # bash
-#'     bash_lines <- paste0(
-#'     c(
-#'     slurm_preamble,
-#'     "module load R",
-#'     "Rscript ", run_script_path
-#'     )
-#'     )
-#'
-#'     bash_script_path <- sub("_run.R$", "_bash.sh", run_script_path)
-#'     writeLines(bash_lines, bash_script_path)
-#'     #print(bash_lines)
-#'
-#'   return(bash_script_path)
-#'   }
-#' )
-
-
-
 
