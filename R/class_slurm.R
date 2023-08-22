@@ -69,7 +69,7 @@ Slurm <- setClass(
     max_time_hours = 0L,
     max_time_mins = 1L,
     max_time_secs = 0L,
-    directory = character(),
+    directory = ".",
     array = integer(),
     # bash script things
     modules = character(),
@@ -100,14 +100,14 @@ setMethod(
                               .Object@max_time_hours,
                               .Object@max_time_mins,
                               .Object@max_time_secs)}
+      #SBATCH --chdir={.Object@directory}
       #SBATCH --mem={as.character(.Object@mem_per_cpu)}M"
     )
 
     # Optional flags
-    directory <- if(length(.Object@directory) > 0) glue("#SBATCH --chdir={.Object@directory}") else ""
     array <- if(length(.Object@array) > 0) glue("#SBATCH --array={paste0(.Object@array, collapse=',')}") else ""
     array_arg <- if(length(.Object@array) > 0) "--SLURM_ARRAY_TASK_ID=\"${SLURM_ARRAY_TASK_ID}\"" else ""
-    optional_flags <- c(directory, array)
+    optional_flags <- c(array)
 
     # Add the optional flags
     slurm_preamble <- paste0(c(slurm_preamble, optional_flags[optional_flags!=""]), collapse="\n")
@@ -118,18 +118,20 @@ setMethod(
     cat("Reading raw R script:\t", script_path, "\n")
     raw_script_lines <- readLines(script_path)
 
-    # create a new R script, remove 'library(HPCmanager) code between "#SBATCH" flags
+    # create a new R script, remove the Slurm() object code between "#SBATCH" flags
     slurm_header_line_idxs <- grep("#SBATCH", raw_script_lines)
     stopifnot(length(slurm_header_line_idxs) == 2)
     start <- slurm_header_line_idxs[1]
     end <- slurm_header_line_idxs[2]
     run_script <- raw_script_lines[-(start:end)]
-    run_path <- sub(".R$", "_run.R", script_path)
+
+
+    run_path <- create_path(script_path, "run", .Object@directory)
     cat("Creating new R script:\t", run_path, "\n")
     writeLines(run_script, run_path)
 
     # Create the bash script
-    bash_path <- sub(".R$", "_bash.sh", script_path)
+    bash_path <- create_path(script_path, "bash", .Object@directory)
     modules <- ""
     if(length(.Object@modules) > 0) {
       for(mod in .Object@modules) {

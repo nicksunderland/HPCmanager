@@ -88,3 +88,54 @@ get_argument <- function(parameter_name) {
     }
   }
 }
+
+
+#' Title
+#' @description
+#' Resolve the path in the same way that Slurm deals with the 'directory 'chdir' flag
+#' https://slurm.schedmd.com/sbatch.html
+#' 1. If directory starts with ".", then path is the current directory
+#' 2. If directory starts with a "/", then path is considered absolute and the file is located there
+#' 3. If directory starts with neither then a subdirectory is create below the raw .R script
+#' @param path a string path to the raw .R script
+#' @param type string. type of path to return, either "run" or "bash"
+#' @param directory the directory path
+#'
+#' @return a path to either a "_run.R" or "_bash.sh" file
+#' @export
+#'
+create_path <- function(path, type, directory) {
+
+  # Check inputs
+  valid.file.types = c("run", "bash")
+  stopifnot("Not a valid type" = type %in% valid.file.types,
+            "Not a valid directory" = is.character(directory) & length(directory)>0,
+            "Not a valid file path" = file.exists(path),
+            "Not a valid .R file" = grepl(".R$", path))
+
+  # Get the file name
+  raw_r_file_name <- sub(".R$", "", basename(path))
+  raw_r_file_dir  <- dirname(path)
+
+  # Work out where the file should go
+  if(directory[1] == ".") {
+    out_dir = raw_r_file_dir
+  } else if(directory[1] == "/" | directory[1] == "\\") {
+    stopifnot("Full directory path provided, but doesn't exist" = dir.exists(directory))
+    out_dir = directory
+  } else {
+    out_dir = file.path(raw_r_file_dir, directory)
+    if(!dir.exists(out_dir)) {
+      dir.create(out_dir)
+    }
+  }
+
+  # Add the file name and type
+  if(type == "bash") {
+    out_path = file.path(out_dir, paste0(raw_r_file_name, "_bash.sh"))
+  } else if(type == "run") {
+    out_path = file.path(out_dir, paste0(raw_r_file_name, "_run.R"))
+  }
+
+  return(out_path)
+}
