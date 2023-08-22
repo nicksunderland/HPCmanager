@@ -13,6 +13,7 @@
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
 #' @slot mem_per_cpu integer.
+#' @slot directory character.
 #' @slot modules character.
 #' @slot r_version character.
 #' @slot rscript_options character.
@@ -36,6 +37,7 @@ Slurm <- setClass(
     max_time_mins = "integer",
     max_time_secs = "integer",
     mem_per_cpu = "integer",
+    directory = "character",
     modules = "character",
     r_version = "character",
     rscript_options = "character"
@@ -64,6 +66,7 @@ Slurm <- setClass(
     max_time_hours = 0L,
     max_time_mins = 1L,
     max_time_secs = 0L,
+    directory = "output",
     modules = character(),
     r_version = "4.2.1",
     rscript_options = ""
@@ -92,6 +95,7 @@ setMethod(
                               .Object@max_time_hours,
                               .Object@max_time_mins,
                               .Object@max_time_secs)}
+      #SBATCH --chdir={.Object@directory}
       #SBATCH --mem={as.character(.Object@mem_per_cpu)}M"
     )
     cat("Creating slurm header:\n", slurm_preamble, "\n")
