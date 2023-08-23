@@ -36,6 +36,8 @@ TODO: the description
 
 \item{\code{mem_per_cpu}}{integer.}
 
+\item{\code{mem_per_cpu_unit}}{character.}
+
 \item{\code{directory}}{character.}
 
 \item{\code{modules}}{character.}
