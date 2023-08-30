@@ -63,7 +63,7 @@ Slurm <- setClass(
     job_name = character(),
     account = character(),
     partition = "cpu",
-    nodes = 2L,
+    nodes = 1L,
     tasks_per_node = 2L,
     cpu_per_task = 1L,
     mem_per_cpu = 1L,
@@ -97,7 +97,6 @@ setMethod(
       #SBATCH --job-name={.Object@job_name}
       #SBATCH --account={.Object@account}
       #SBATCH --partition={.Object@partition}
-      #SBATCH --cpus-per-task={as.character(.Object@cpu_per_task)}
       #SBATCH --nodes={as.character(.Object@nodes)}
       #SBATCH --cpus-per-task={as.character(.Object@cpu_per_task)}
       #SBATCH --time={sprintf('%d-%02d:%02d:%02d',
