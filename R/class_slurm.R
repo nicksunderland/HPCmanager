@@ -109,9 +109,8 @@ setMethod(
       #SBATCH --mem={as.character(.Object@mem_per_cpu)}{.Object@mem_per_cpu_unit}"
     )
 
-    # Optional flags
+    # Optional flags for slurm header
     array <- if(length(.Object@array) > 0) glue("#SBATCH --array={paste0(.Object@array, collapse=',')}") else ""
-    array_arg <- if(length(.Object@array) > 0) "--SLURM_ARRAY_TASK_ID=\"${SLURM_ARRAY_TASK_ID}\"" else ""
     optional_flags <- c(array)
 
     # Add the optional flags
@@ -145,6 +144,11 @@ setMethod(
     }
     modules <- paste0(modules, collapse="\n")
 
+    # slurm things that need to be available in the Rscript pass as a parameter-argument and access
+    # in the script with the `get_argument()`
+    cpus_arg <- "--SLURM_CPUS_PER_TASK=\"${SLURM_CPUS_PER_TASK}\""
+    array_arg <- if(length(.Object@array) > 0) "--SLURM_ARRAY_TASK_ID=\"${SLURM_ARRAY_TASK_ID}\"" else ""
+
     # Build the bash script
     bash_script <- glue(
       "{slurm_preamble}
@@ -152,7 +156,7 @@ setMethod(
       module load languages/r/{.Object@r_version}
       {modules}
 
-      Rscript {.Object@rscript_options} {run_path} {array_arg}"
+      Rscript {.Object@rscript_options} {run_path} {array_arg} {cpus_arg}"
     )
     cat("Creating bash script:\t", bash_path, "\n")
     writeLines(bash_script, bash_path)

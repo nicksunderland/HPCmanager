@@ -54,7 +54,8 @@ get_script_path <- function() {
 get_argument <- function(parameter_name) {
 
   # Set the valid run parameters
-  valid.run.parameters <- c( "SLURM_ARRAY_TASK_ID" = as.integer )
+  valid.run.parameters <- c( "SLURM_ARRAY_TASK_ID" = as.integer,
+                             "SLURM_CPUS_PER_TASK" = as.integer)
 
   # make sure parameter is valid
   stopifnot("Not a valid parameter_name" = parameter_name %in% names(valid.run.parameters))
