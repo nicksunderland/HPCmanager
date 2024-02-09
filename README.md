@@ -1,0 +1,135 @@
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+# HPCmanager
+
+The goal of HPCmanager is to simplify interacting with the HPC when
+running R-scripts.
+
+## Installation
+
+You can install the development version of HPCmanager from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("nicksunderland/HPCmanager")
+```
+
+## Example
+
+This is a basic example:
+
+### The original r_script.R file
+
+The `Slurm()` object controls the writing of the bash script. As the
+original R script needs to be submitted to the compute nodes we need to
+avoid recursively creating R scripts and so the original script is
+processed into a ‘run’ script (with any codes flagged by `#SBATCH`
+removed) and a bash script to submit to the HPC.
+
+``` r
+library(HPCmanager)
+
+# you may have an expensive function to execute
+expensive_function <- function(x) {
+  
+  msg <- paste0("I'm an expensive function running array element: ", x)
+  
+  print(msg)
+  
+}
+
+# an array to process
+array_idxs <- 1:5
+
+#SBATCH
+Slurm(job_name = "test_job",
+      account = "HPC_ACCOUNT_CODE",
+      partition = "cpu",
+      max_time_hours = 1L,
+      max_time_mins = 30L,
+      mem_per_cpu = 1L,
+      mem_per_cpu_unit = "G",
+      tasks_per_node = 1L, 
+      nodes = 1L, 
+      cpu_per_task = 4L,
+      directory = ".",
+      array = array_idxs)
+#SBATCH
+
+# get the array index
+array_idx <- get_argument("SLURM_ARRAY_TASK_ID")
+
+# run the function 
+expensive_function(array_idx)
+```
+
+### The auto-generated r_script_run.R file
+
+``` r
+library(HPCmanager)
+
+# you may have an expensive function to execute
+expensive_function <- function(x) {
+  
+  msg <- paste0("I'm an expensive function running array element: ", x)
+  
+  print(msg)
+  
+}
+
+# an array to process
+array_idxs <- 1:5
+
+#--------------------------------
+#-->Slurm() object removed
+#--------------------------------
+
+# get the array index
+array_idx <- get_argument("SLURM_ARRAY_TASK_ID")
+
+# run the function 
+expensive_function(array_idx)
+```
+
+### The auto-generated r_script_bash.sh file
+
+``` bash
+#!/bin/bash
+#SBATCH --job-name=do_stuff
+#SBATCH --account=SMEDXXXXXX
+#SBATCH --partition=cpu
+#SBATCH --cpus-per-task=1
+#SBATCH --nodes=2
+#SBATCH --cpus-per-task=1
+#SBATCH --time=0-00:20:00
+#SBATCH --chdir=output
+#SBATCH --mem=20G
+#SBATCH --array=1,2,3,4,5
+
+module load languages/r/4.2.1
+
+Rscript  /path/to/r_script_run.R --SLURM_ARRAY_TASK_ID="${SLURM_ARRAY_TASK_ID}"
+```
+
+### Execute
+
+Running the script on the HPC is then simply logging into the login
+nodes and running:
+
+``` bash
+Rscript  /path/to/r_script.R
+```
+
+### The resulting file structure
+
+\|root  
+\|— r_script.R  
+\|— r_script_run.R  
+\|— r_script_bash.sh  
+\|— slurm-\[job_id\]\_1.out  
+\|— slurm-\[job_id\]\_2.out  
+\|— slurm-\[job_id\]\_3.out  
+\|— slurm-\[job_id\]\_4.out  
+\|— slurm-\[job_id\]\_5.out

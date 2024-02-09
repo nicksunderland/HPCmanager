@@ -34,9 +34,9 @@ TODO: the description
 
 \item{\code{max_time_secs}}{integer}
 
-\item{\code{mem_per_cpu}}{integer.}
+\item{\code{mem}}{integer.}
 
-\item{\code{mem_per_cpu_unit}}{character.}
+\item{\code{mem_unit}}{character.}
 
 \item{\code{directory}}{character.}
 

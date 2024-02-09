@@ -12,8 +12,8 @@
 #' @slot max_time_hours integer
 #' @slot max_time_mins integer
 #' @slot max_time_secs integer
-#' @slot mem_per_cpu integer.
-#' @slot mem_per_cpu_unit character.
+#' @slot mem integer.
+#' @slot mem_unit character.
 #' @slot directory character.
 #' @slot modules character.
 #' @slot r_version character.
@@ -38,8 +38,8 @@ Slurm <- setClass(
     max_time_hours = "integer",
     max_time_mins = "integer",
     max_time_secs = "integer",
-    mem_per_cpu = "integer",
-    mem_per_cpu_unit = "character",
+    mem = "integer",
+    mem_unit = "character",
     directory = "character",
     array = "integer",
     modules = "character",
@@ -66,8 +66,8 @@ Slurm <- setClass(
     nodes = 1L,
     tasks_per_node = 2L,
     cpu_per_task = 1L,
-    mem_per_cpu = 1L,
-    mem_per_cpu_unit = "G",
+    mem = 1L,
+    mem_unit = "G",
     max_time_days = 0L,
     max_time_hours = 0L,
     max_time_mins = 1L,
@@ -76,7 +76,7 @@ Slurm <- setClass(
     array = integer(),
     # bash script things
     modules = character(),
-    r_version = "4.2.1",
+    r_version = "4.3.1",
     rscript_options = ""
   )
 )
@@ -105,7 +105,7 @@ setMethod(
                               .Object@max_time_mins,
                               .Object@max_time_secs)}
       #SBATCH --chdir={.Object@directory}
-      #SBATCH --mem={as.character(.Object@mem_per_cpu)}{.Object@mem_per_cpu_unit}"
+      #SBATCH --mem={as.character(.Object@mem)}{.Object@mem_unit}"
     )
 
     # Optional flags for slurm header
